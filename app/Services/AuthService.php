@@ -36,7 +36,7 @@ class AuthService
      *
      * Việc tạo phiên (web) hoặc cấp token (API) và rẽ nhánh "buộc đổi mật khẩu" (A1) do Controller đảm nhiệm.
      *
-     * @throws ValidationException        sai thông tin đăng nhập hoặc tài khoản bị khóa (HTTP 422 / quay lại form)
+     * @throws ValidationException sai thông tin đăng nhập hoặc tài khoản bị khóa (HTTP 422 / quay lại form)
      * @throws TooManyLoginAttemptsException
      */
     public function attempt(string $email, string $password, ?string $ip = null): User

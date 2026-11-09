@@ -133,7 +133,7 @@ class InventoryService
      * @param  string|int|float  $unitCost  nhập: đơn giá nhập; xuất / chuyển kho / kiểm kê: giá vốn bình quân tại thời điểm xác nhận
      * @param  string|int|float  $avgCostAfter  giá vốn bình quân của sản phẩm SAU biến động
      *
-     * @throws BusinessConflictException  tồn sau biến động sẽ âm (hết hàng) -> HTTP 409
+     * @throws BusinessConflictException tồn sau biến động sẽ âm (hết hàng) -> HTTP 409
      */
     public function applyMovement(
         Product|int $product,

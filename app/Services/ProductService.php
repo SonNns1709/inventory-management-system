@@ -74,7 +74,7 @@ class ProductService
     /**
      * @param  array<string, mixed>  $data
      *
-     * @throws BusinessConflictException  đổi SKU khi sản phẩm đã có giao dịch (BR02.06-3, BR02.06-4)
+     * @throws BusinessConflictException đổi SKU khi sản phẩm đã có giao dịch (BR02.06-3, BR02.06-4)
      */
     public function update(Product $product, array $data): Product
     {

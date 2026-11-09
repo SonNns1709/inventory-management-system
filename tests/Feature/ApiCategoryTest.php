@@ -23,8 +23,8 @@ class ApiCategoryTest extends TestCase
     public function test_danh_sach_co_khuon_data_meta_va_so_san_pham(): void
     {
         $this->apiAdmin();
-        $dienThoai = Category::factory()->create(['name' => 'Điện thoại']);
-        Category::factory()->create(['name' => 'Gia dụng']);
+        $dienThoai = Category::factory()->create(['name' => 'Dien thoai']);
+        Category::factory()->create(['name' => 'Gia dung']);
         Product::factory()->count(2)->create(['category_id' => $dienThoai->id]);
 
         $this->getJson('/api/categories')
@@ -35,7 +35,7 @@ class ApiCategoryTest extends TestCase
                 'meta' => ['current_page', 'last_page', 'per_page', 'total'],
             ])
             ->assertJsonPath('meta.total', 2)
-            ->assertJsonPath('data.0.name', 'Điện thoại')   // mặc định sắp xếp A–Z
+            ->assertJsonPath('data.0.name', 'Dien thoai')   // mặc định sắp xếp A–Z
             ->assertJsonPath('data.0.products_count', 2)
             ->assertJsonPath('data.1.products_count', 0);
     }

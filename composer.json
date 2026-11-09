@@ -3,10 +3,16 @@
     "name": "nhom11/inventory-management",
     "type": "project",
     "description": "Hệ thống Quản lý hàng tồn kho — Chuyên đề tổng hợp, Nhóm 11 (Laravel 13 + MySQL 8, Layered Monolith: MVC + Service Layer).",
-    "keywords": ["laravel", "inventory", "warehouse", "livewire", "sanctum"],
+    "keywords": [
+        "laravel",
+        "inventory",
+        "warehouse",
+        "livewire",
+        "sanctum"
+    ],
     "license": "MIT",
     "require": {
-        "php": "^8.3",
+        "php": "^8.4.1",
         "laravel/framework": "^13.8",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
