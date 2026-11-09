@@ -1,0 +1,113 @@
+# Workflow CI — ứng với mục "V.1 Workflow CI (.github/workflows/ci.yml, rút gọn)" ở Chương 7 của báo cáo.
+# Lưu ý: tệp Word nhận được chỉ có mục lục của Chương 7, không có đoạn mã mẫu; các job dưới đây là bố trí thông dụng
+# cho dự án Laravel. Đối chiếu lại khi có bản đầy đủ.
+# Mỗi lần push / mở Pull Request vào main hoặc develop: kiểm tra định dạng, chạy test, thử migrate trên MySQL 8, dựng giao diện.
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Pint (định dạng mã)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+      - name: Cài thư viện PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Kiểm tra định dạng
+        run: vendor/bin/pint --test
+
+  test:
+    name: PHPUnit (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, intl, pdo_sqlite, sqlite3, bcmath, zip
+          coverage: none
+          tools: composer:v2
+      - name: Cài thư viện PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Chuẩn bị .env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      # phpunit.xml dùng SQLite in-memory nên không cần dịch vụ CSDL; các test không gọi Vite (đã tắt trong TestCase)
+      - name: Chạy test
+        run: php artisan test
+
+  migrate-mysql:
+    name: Migrate + seed trên MySQL 8
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: inventory_management
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: inventory_management
+      DB_USERNAME: root
+      DB_PASSWORD: root
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, intl, pdo_mysql, bcmath, zip
+          coverage: none
+          tools: composer:v2
+      - name: Cài thư viện PHP
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Chuẩn bị .env
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+      # Kiểm tra 15 bảng, tên khóa ngoại và ràng buộc CHECK thật trên MySQL (SQLite khi chạy test không kiểm được các phần này)
+      - name: Migrate + seed
+        run: php artisan migrate:fresh --seed --force
+      - name: Rollback thử toàn bộ migration
+        run: php artisan migrate:rollback --force
+
+  assets:
+    name: Vite build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Cài thư viện Node
+        run: npm ci --ignore-scripts
+      - name: Dựng CSS/JS
+        run: npm run build

@@ -1,0 +1,62 @@
+# Workflow CD — ứng với mục "V.2 Workflow CD (.github/workflows/cd.yml, rút gọn)" ở Chương 7 của báo cáo.
+# Lưu ý: tệp Word nhận được chỉ có mục lục của Chương 7, không có đoạn mã mẫu; nội dung dưới đây theo thông lệ
+# (ghcr.io + webhook) và nền tảng triển khai nêu ở Chương 1 (Render / Railway / VPS Docker). Đối chiếu lại khi có bản đầy đủ.
+# Khi gắn tag phiên bản (ví dụ v1.0.0): dựng Docker image (Dockerfile nhiều tầng), đẩy lên GitHub Container Registry,
+# rồi gọi webhook triển khai của Render / Railway (hoặc SSH vào VPS chạy Docker).
+name: CD
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    name: Dựng và đẩy Docker image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: app
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Triển khai
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      DEPLOY_HOOK_URL: ${{ secrets.DEPLOY_HOOK_URL }}
+    steps:
+      # Render / Railway: tạo Deploy Hook trong dashboard rồi lưu URL vào secret DEPLOY_HOOK_URL
+      - name: Gọi webhook triển khai
+        if: ${{ env.DEPLOY_HOOK_URL != '' }}
+        run: curl -fsS -X POST "$DEPLOY_HOOK_URL"
+      - name: Chưa cấu hình DEPLOY_HOOK_URL
+        if: ${{ env.DEPLOY_HOOK_URL == '' }}
+        run: echo "Đã đẩy image lên GHCR. Chưa có secret DEPLOY_HOOK_URL nên bỏ qua bước gọi webhook triển khai."
+      # VPS chạy Docker: thay các bước trên bằng SSH, ví dụ appleboy/ssh-action rồi chạy
+      #   docker compose pull && docker compose up -d && docker compose exec -T app php artisan migrate --force

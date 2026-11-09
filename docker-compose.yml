@@ -1,0 +1,82 @@
+# Môi trường phát triển — ứng với mục "II.2 docker-compose.yml (môi trường phát triển)" ở Chương 4 của báo cáo
+# (tệp Word nhận được chỉ có tiêu đề mục này trong mục lục, chưa có nội dung nên cấu hình dưới đây theo thông lệ).
+#
+#   docker compose up -d --build          # app + MySQL 8
+#   docker compose --profile tools up -d  # thêm phpMyAdmin (http://localhost:8080)
+#   docker compose --profile vite up -d   # thêm Vite dev server (hot reload, cổng 5173)
+#
+# Lần chạy đầu: container tự cài vendor/, tạo .env, tạo APP_KEY và chạy migrate (RUN_MIGRATIONS=true).
+# Nạp dữ liệu mẫu:  docker compose exec app php artisan db:seed
+
+name: inventory-management
+
+services:
+    app:
+        build:
+            context: .
+            target: app
+        container_name: inventory-app
+        ports:
+            - "${APP_PORT:-8000}:80"
+        environment:
+            APP_ENV: ${APP_ENV:-local}
+            APP_DEBUG: ${APP_DEBUG:-true}
+            APP_URL: ${APP_URL:-http://localhost:8000}
+            DB_CONNECTION: mysql
+            DB_HOST: db
+            DB_PORT: 3306
+            DB_DATABASE: ${DB_DATABASE:-inventory_management}
+            DB_USERNAME: ${DB_USERNAME:-inventory}
+            DB_PASSWORD: ${DB_PASSWORD:-secret}
+            RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+        volumes:
+            - .:/var/www/html
+        depends_on:
+            db:
+                condition: service_healthy
+        restart: unless-stopped
+
+    db:
+        image: mysql:8.0
+        container_name: inventory-db
+        command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+        ports:
+            - "${DB_FORWARD_PORT:-3307}:3306"
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+            MYSQL_DATABASE: ${DB_DATABASE:-inventory_management}
+            MYSQL_USER: ${DB_USERNAME:-inventory}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+        volumes:
+            - db-data:/var/lib/mysql
+        healthcheck:
+            test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+        restart: unless-stopped
+
+    phpmyadmin:
+        image: phpmyadmin:5
+        container_name: inventory-phpmyadmin
+        profiles: ["tools"]
+        ports:
+            - "8080:80"
+        environment:
+            PMA_HOST: db
+        depends_on:
+            - db
+
+    vite:
+        image: node:22-alpine
+        container_name: inventory-vite
+        profiles: ["vite"]
+        working_dir: /var/www/html
+        command: sh -c "npm install --ignore-scripts && npm run dev -- --host 0.0.0.0"
+        ports:
+            - "5173:5173"
+        volumes:
+            - .:/var/www/html
+
+volumes:
+    db-data:
