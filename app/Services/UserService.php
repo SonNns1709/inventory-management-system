@@ -68,7 +68,7 @@ class UserService
     /**
      * @param  array{name: string, role: string, phone?: string|null}  $data
      *
-     * @throws BusinessConflictException  hạ quyền Admin duy nhất còn lại (BR06.01-6)
+     * @throws BusinessConflictException hạ quyền Admin duy nhất còn lại (BR06.01-6)
      */
     public function update(User $user, array $data): User
     {
@@ -95,7 +95,7 @@ class UserService
     /**
      * Khóa <-> mở khóa tài khoản.
      *
-     * @throws BusinessConflictException  tự khóa mình (BR06.01-7) hoặc khóa Admin duy nhất còn lại (BR06.01-6)
+     * @throws BusinessConflictException tự khóa mình (BR06.01-7) hoặc khóa Admin duy nhất còn lại (BR06.01-6)
      */
     public function toggleStatus(User $user, User $actor): User
     {
