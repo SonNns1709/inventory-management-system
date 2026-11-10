@@ -60,7 +60,7 @@ return [
                     'roles' => ['admin'],
                     'uc' => ['UC02.03'],
                     'sprint' => 2,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/warehouses', 'PUT|DELETE /api/warehouses/{id}', 'PATCH /api/warehouses/{id}/toggle'],
                     'service' => 'WarehouseService',
                 ],

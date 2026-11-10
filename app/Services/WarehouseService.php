@@ -97,7 +97,7 @@ class WarehouseService
     public function deactivate(Warehouse $warehouse): Warehouse
     {
         if ((int) Inventory::query()->where('warehouse_id', $warehouse->getKey())->sum('quantity') > 0) {
-            throw new BusinessConflictException('Kho còn hàng tồn, không thể ngừng hoạt động');
+            throw new BusinessConflictException('Kho còn hàng tồn, hãy chuyển hết hàng sang kho khác trước khi ngừng hoạt động');
         }
 
         $warehouse->forceFill(['is_active' => false])->save();
