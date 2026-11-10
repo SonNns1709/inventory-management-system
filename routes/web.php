@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -50,7 +51,7 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 
         // Sprint 1–2: trang khung
-        Route::get('/suppliers', PlaceholderController::class)->name('suppliers.index');        // UC02.02
+        Route::get('/suppliers', [SupplierController::class, 'index'])->name('suppliers.index');        // UC02.02
         Route::get('/warehouses', PlaceholderController::class)->name('warehouses.index');      // UC02.03
     });
 
