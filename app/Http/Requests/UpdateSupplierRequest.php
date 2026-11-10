@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Validation\Rule;
-
 /** UC02.02 — sửa nhà cung cấp (PUT /api/suppliers/{supplier} #13). */
 class UpdateSupplierRequest extends StoreSupplierRequest
 {
@@ -14,8 +12,6 @@ class UpdateSupplierRequest extends StoreSupplierRequest
 
     public function rules(): array
     {
-        return array_merge(parent::rules(), [
-            'name' => ['required', 'string', 'max:150', Rule::unique('suppliers', 'name')->ignore($this->route('supplier'))],
-        ]);
+        return static::rulesFor($this->route('supplier'));
     }
 }
