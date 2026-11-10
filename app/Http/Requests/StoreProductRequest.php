@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\VietnameseMessages;
 use App\Models\Product;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * UC02.05 — thêm sản phẩm (POST /api/products #23).
@@ -38,12 +39,38 @@ class StoreProductRequest extends FormRequest
 
     public function rules(): array
     {
+        return static::rulesFor();
+    }
+
+    /**
+     * Rules shared by API and Livewire. Passing a product allows its current SKU on update.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function rulesFor(?Product $product = null): array
+    {
+        $skuRules = [
+            $product === null ? 'required' : 'sometimes',
+            'string',
+            'max:30',
+            'regex:/^[A-Z0-9._\-]+$/',
+            Rule::unique('products', 'sku')->ignore($product),
+        ];
+
+        if ($product !== null) {
+            $skuRules[] = function (string $attribute, mixed $value, \Closure $fail) use ($product): void {
+                if ($value !== $product->sku && $product->stockMovements()->exists()) {
+                    $fail('Sản phẩm đã phát sinh giao dịch, không được đổi SKU vì cần giữ nguyên thẻ kho.');
+                }
+            };
+        }
+
         return [
-            'sku' => ['required', 'string', 'max:30', 'regex:/^[A-Z0-9._\-]+$/', 'unique:products,sku'],
+            'sku' => $skuRules,
             'name' => ['required', 'string', 'max:200'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'unit' => ['required', 'string', 'max:20'],
-            'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
             'min_stock_level' => ['required', 'integer', 'min:0'],
             'description' => ['nullable', 'string', 'max:5000'],
         ];
