@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\WarehouseController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -51,7 +52,7 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
 
         // Sprint 1–2: trang khung
         Route::get('/suppliers', PlaceholderController::class)->name('suppliers.index');        // UC02.02
-        Route::get('/warehouses', PlaceholderController::class)->name('warehouses.index');      // UC02.03
+        Route::get('/warehouses', [WarehouseController::class, 'index'])->name('warehouses.index');      // UC02.03
     });
 
     // ---------------------------------------------------------------- Dùng chung Admin + Nhân viên kho
