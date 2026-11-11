@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\InventoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,7 +60,9 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     Route::get('/imports', PlaceholderController::class)->name('imports.index');                // UC03.01, UC03.03, UC03.04
     Route::get('/exports', PlaceholderController::class)->name('exports.index');                // UC03.02, UC03.03, UC03.04
     Route::get('/adjustments', PlaceholderController::class)->name('adjustments.index');        // UC04.03
-    Route::get('/inventory', PlaceholderController::class)->name('inventory.index');            // UC04.01, UC04.02
+    Route::get('/inventory/products/{product}/stock-card', [InventoryController::class, 'stockCard'])
+        ->name('inventory.stock-card'); // UC04.02
+    Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');   // UC04.01
     Route::get('/inventory/low-stock', PlaceholderController::class)->name('inventory.low-stock'); // UC04.04
 
     // ---------------------------------------------------------------- Báo cáo và Quản trị (chỉ Admin)

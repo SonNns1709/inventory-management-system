@@ -122,7 +122,7 @@ return [
                     'roles' => ['admin', 'staff'],
                     'uc' => ['UC04.01', 'UC04.02'],
                     'sprint' => 3,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET /api/inventory', 'GET /api/inventory/total-value', 'GET /api/products/{id}/stock-card'],
                     'service' => 'InventoryService',
                 ],
