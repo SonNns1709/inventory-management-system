@@ -50,7 +50,7 @@ return [
                     'roles' => ['admin'],
                     'uc' => ['UC02.02'],
                     'sprint' => 1,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/suppliers', 'PUT|DELETE /api/suppliers/{id}', 'PATCH /api/suppliers/{id}/toggle'],
                     'service' => 'SupplierService',
                 ],
