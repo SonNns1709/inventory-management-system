@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
+use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -69,7 +70,7 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/reports/stock-summary', PlaceholderController::class)->name('reports.stock-summary'); // UC05.02, UC05.04
         Route::get('/reports/adjustments', PlaceholderController::class)->name('reports.adjustments');     // UC05.03, UC05.04
-        Route::get('/users', PlaceholderController::class)->name('users.index');                // UC06.01
+        Route::get('/users', [UserController::class, 'index'])->name('users.index'); // UC06.01
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index'); // UC06.02
     });
 });
