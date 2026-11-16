@@ -13,7 +13,12 @@ class InventoryFilter extends Filter
 
     protected static function extraRules(): array
     {
-        return ['product_id' => 'nullable|integer', 'warehouse_id' => 'nullable|integer'];
+        return [
+            'product_id' => 'nullable|integer',
+            'warehouse_id' => 'nullable|integer',
+            'category_id' => 'nullable|integer',
+            'low_stock' => 'nullable|boolean',
+        ];
     }
 
     public static function apply(Builder $query, array $filters): Builder
@@ -21,6 +26,8 @@ class InventoryFilter extends Filter
         $query = $query
             ->when(isset($filters['product_id']), fn (Builder $q) => $q->where('product_id', $filters['product_id']))
             ->when(isset($filters['warehouse_id']), fn (Builder $q) => $q->where('warehouse_id', $filters['warehouse_id']))
+            ->when(isset($filters['category_id']), fn (Builder $q) => $q->whereHas('product', fn (Builder $p) => $p->where('category_id', $filters['category_id'])))
+            ->when(! empty($filters['low_stock']), fn (Builder $q) => $q->whereHas('product', fn (Builder $p) => $p->lowStock()))
             ->when(
                 isset($filters['keyword']) && $filters['keyword'] !== '',
                 fn (Builder $q) => $q->whereHas('product', fn (Builder $p) => $p->search($filters['keyword'], ['sku', 'name'])),
