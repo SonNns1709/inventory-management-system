@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ActivityLogController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
@@ -69,6 +70,6 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
         Route::get('/reports/stock-summary', PlaceholderController::class)->name('reports.stock-summary'); // UC05.02, UC05.04
         Route::get('/reports/adjustments', PlaceholderController::class)->name('reports.adjustments');     // UC05.03, UC05.04
         Route::get('/users', PlaceholderController::class)->name('users.index');                // UC06.01
-        Route::get('/activity-logs', PlaceholderController::class)->name('activity-logs.index'); // UC06.02
+        Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index'); // UC06.02
     });
 });
