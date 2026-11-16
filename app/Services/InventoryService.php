@@ -36,8 +36,30 @@ class InventoryService
     {
         $filters = InventoryFilter::valid($params);
 
-        return InventoryFilter::apply(Inventory::query()->with(['product', 'warehouse']), $filters)
+        $page = InventoryFilter::apply(Inventory::query()->with(['product', 'warehouse']), $filters)
             ->paginate($perPage ?? InventoryFilter::perPage($filters));
+
+        $this->attachProductTotals($page->getCollection());
+
+        return $page;
+    }
+
+    /** Gắn `product_total_stock` (TỔNG tồn mọi kho) vào từng dòng để đánh dấu "Tồn thấp" đúng BR04.04-3. */
+    private function attachProductTotals(Collection $rows): void
+    {
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $totals = Inventory::query()
+            ->whereIn('product_id', $rows->pluck('product_id')->unique()->all())
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(quantity) as total')
+            ->pluck('total', 'product_id');
+
+        foreach ($rows as $row) {
+            $row->setAttribute('product_total_stock', (int) ($totals[$row->product_id] ?? 0));
+        }
     }
 
     /**

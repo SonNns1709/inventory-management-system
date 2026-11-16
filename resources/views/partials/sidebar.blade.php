@@ -8,7 +8,7 @@
             <h3 class="px-5 pb-1 pt-4 text-[11px] font-semibold uppercase tracking-wider text-white/60">{{ $group['title'] }}</h3>
             <ul>
                 @foreach ($group['items'] as $item)
-                    @php($active = request()->routeIs($item['route']))
+                    @php($active = request()->routeIs($item['route'], ...($item['also'] ?? [])))
                     <li>
                         <a href="{{ route($item['route']) }}"
                            @class([
