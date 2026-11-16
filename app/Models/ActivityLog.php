@@ -51,6 +51,28 @@ class ActivityLog extends Model
         static::deleting(fn () => throw new LogicException('activity_logs là sổ chỉ ghi thêm, không được xóa.'));
     }
 
+    public function actionBadge(): string
+    {
+        return match (true) {
+            str_ends_with($this->action, '_failed'),
+            str_ends_with($this->action, '_deleted'),
+            str_ends_with($this->action, '_cancelled'),
+            str_ends_with($this->action, '_locked'),
+            str_ends_with($this->action, '_deactivated') => 'danger',
+            str_ends_with($this->action, '_confirmed'),
+            str_ends_with($this->action, '_created'),
+            str_ends_with($this->action, '_activated'),
+            str_ends_with($this->action, '_unlocked'),
+            $this->action === 'login_success' => 'success',
+            str_ends_with($this->action, '_updated'),
+            str_ends_with($this->action, '_refreshed') => 'info',
+            str_ends_with($this->action, '_reset'),
+            $this->action === 'password_changed',
+            $this->action === 'report_exported' => 'warning',
+            default => 'neutral',
+        };
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

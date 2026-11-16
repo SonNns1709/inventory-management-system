@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\VietnameseMessages;
 use App\Models\Supplier;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * UC02.02 — thêm nhà cung cấp (POST /api/suppliers #12). BR02.02-1: tên duy nhất; BR02.02-2: thông tin hợp lệ;
@@ -34,8 +35,19 @@ class StoreSupplierRequest extends FormRequest
 
     public function rules(): array
     {
+        return static::rulesFor();
+    }
+
+    /**
+     * Luật dùng chung cho Form Request (API) và Livewire (web).
+     * Khi sửa, cho phép giữ nguyên tên của chính nhà cung cấp đó.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function rulesFor(?Supplier $supplier = null): array
+    {
         return [
-            'name' => ['required', 'string', 'max:150', 'unique:suppliers,name'],
+            'name' => ['required', 'string', 'max:150', Rule::unique('suppliers', 'name')->ignore($supplier)],
             'contact_person' => ['nullable', 'string', 'max:100'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s().]+$/'],
             'email' => ['nullable', 'email', 'max:150'],

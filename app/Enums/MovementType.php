@@ -25,4 +25,14 @@ enum MovementType: string
             self::Adjustment => 'Điều chỉnh kiểm kê',
         };
     }
+
+    public function badge(): string
+    {
+        return match ($this) {
+            self::Import => 'success',
+            self::Export => 'warning',
+            self::TransferIn, self::TransferOut => 'info',
+            self::Adjustment => 'danger',
+        };
+    }
 }
