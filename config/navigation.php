@@ -175,7 +175,7 @@ return [
                     'roles' => ['admin'],
                     'uc' => ['UC06.01'],
                     'sprint' => 1,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/users', 'PUT /api/users/{id}', 'PATCH /api/users/{id}/toggle', 'POST /api/users/{id}/reset-password'],
                     'service' => 'UserService',
                 ],
