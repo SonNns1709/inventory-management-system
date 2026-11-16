@@ -8,8 +8,8 @@ use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\SupplierController;
-use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\SupplierController;
+use App\Http\Controllers\Web\UserController;
 use Illuminate\Support\Facades\Route;
 
 /*
