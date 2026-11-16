@@ -185,7 +185,7 @@ return [
                     'roles' => ['admin'],
                     'uc' => ['UC06.02'],
                     'sprint' => 4,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET /api/activity-logs'],
                     'service' => 'ActivityLogService',
                 ],
