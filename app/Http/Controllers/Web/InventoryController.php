@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
-use Illuminate\Contracts\View\View;
 use App\Services\InventoryService;
+use Illuminate\Contracts\View\View;
 
 /**
  * Tồn kho (UC04.01) và Thẻ kho (UC04.02) — giao diện web.
