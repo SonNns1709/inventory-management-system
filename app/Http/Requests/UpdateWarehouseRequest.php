@@ -2,8 +2,6 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Validation\Rule;
-
 /** UC02.03 — sửa kho (PUT /api/warehouses/{warehouse} #18). */
 class UpdateWarehouseRequest extends StoreWarehouseRequest
 {
@@ -14,8 +12,6 @@ class UpdateWarehouseRequest extends StoreWarehouseRequest
 
     public function rules(): array
     {
-        return array_merge(parent::rules(), [
-            'code' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9_\-]+$/', Rule::unique('warehouses', 'code')->ignore($this->route('warehouse'))],
-        ]);
+        return static::rulesFor($this->route('warehouse'));
     }
 }
