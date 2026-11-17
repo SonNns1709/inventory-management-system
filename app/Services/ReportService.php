@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Enums\ActivityAction;
+use App\Enums\AdjustmentReason;
 use App\Enums\MovementType;
-use App\Exceptions\NotImplementedException;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Support\SimpleXlsx;
@@ -18,8 +18,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * Báo cáo — UC05.02 (Nhập – Xuất – Tồn), UC05.03 (lịch sử kiểm kê / điều chỉnh), UC05.04 (xuất Excel). Chỉ Admin.
  * Báo cáo chỉ đọc và tổng hợp, không bao giờ thay đổi dữ liệu (BR05.02-9, BR05.03-6, BR05.04-8).
  *
- * TRẠNG THÁI: UC05.02 (stockSummary) và UC05.04 cho báo cáo Nhập – Xuất – Tồn (buildExport('stock-summary')) đã cài đặt.
- * UC05.03 (adjustmentReport và buildExport('adjustments')) vẫn là khung, ném NotImplementedException (HTTP 501) kèm hướng dẫn.
+ * TRẠNG THÁI: UC05.02 (stockSummary), UC05.03 (adjustmentReport) và UC05.04 (buildExport cho cả hai báo cáo) đều đã cài đặt.
  *
  * Quy tắc đối chiếu bổ sung:
  *  - BR05.02-2: báo cáo Nhập – Xuất – Tồn lọc theo khoảng thời gian, kho và danh mục (bảng API #52 mới liệt kê thời gian + kho nên cần thêm `category_id`).
@@ -123,21 +122,109 @@ class ReportService
     }
 
     /**
-     * UC05.03 — báo cáo lịch sử kiểm kê / điều chỉnh (bảng API #54). Tham số: from, to, warehouse_id, reason.
+     * UC05.03 — báo cáo lịch sử kiểm kê / điều chỉnh (bảng API #54). Tham số: from, to (YYYY-MM-DD), warehouse_id, reason, only_diff.
+     * Mặc định: từ ngày 1 của tháng này đến hôm nay, mọi kho, mọi lý do, chỉ các dòng có chênh lệch.
      *
-     * TODO (Sprint 4): chỉ phiếu đã confirmed trong kỳ (BR05.03-3, BR05.03-7); mỗi dòng gồm phiếu, kho, sản phẩm, system_qty, counted_qty,
-     * diff_qty, lý do, giá trị chênh lệch (BR05.03-4); tổng hao hụt, tổng dôi thừa, tỷ lệ sai lệch (BR05.03-5).
+     *  - BR05.03-3 / BR05.03-7: chỉ các phiếu `confirmed` có ngày kiểm kê (adjustment_date) trong kỳ; phiếu nháp / đã hủy không vào báo cáo.
+     *  - BR05.03-4: mỗi dòng gồm phiếu, kho, sản phẩm, số lượng hệ thống, số lượng thực đếm, chênh lệch, giá trị, lý do, người lập.
+     *  - BR05.03-5: tổng hao hụt (các dòng chênh lệch ÂM) và tổng dôi thừa (chênh lệch DƯƠNG), mỗi loại theo số lượng và giá trị;
+     *    tỷ lệ sai lệch = số dòng có chênh lệch / tổng số dòng đã kiểm kê trong kỳ và kho đã chọn × 100 (báo cáo gốc nêu chỉ số này
+     *    nhưng chưa đưa công thức, nên đây là cách tính của khung; lọc theo lý do thì tử số chỉ đếm dòng có lý do đó, mẫu số vẫn là mọi dòng).
+     *  - `only_diff` (mặc định true): chỉ liệt kê dòng có chênh lệch; false thì liệt kê cả dòng khớp. Các chỉ số tổng hợp không đổi.
+     *  - Chỉ đọc (BR05.03-6): không ghi gì vào phiếu hay tồn kho.
      *
      * @param  array<string, mixed>  $params
-     * @return array<string, mixed>
+     * @return array{
+     *     filters: array{from: string, to: string, warehouse_id: int|null, reason: string|null, only_diff: bool},
+     *     rows: list<array<string, mixed>>,
+     *     summary: array{adjustments: int, lines_total: int, lines_diff: int, shortage_qty: int, shortage_value: float, surplus_qty: int, surplus_value: float, net_value: float, error_rate: float}
+     * }
      */
     public function adjustmentReport(array $params = []): array
     {
-        throw new NotImplementedException('UC05.03 — ReportService::adjustmentReport()');
+        $filters = $this->adjustmentFilters($params);
+
+        $items = DB::table('stock_adjustment_items as i')
+            ->join('stock_adjustments as a', 'a.id', '=', 'i.adjustment_id')
+            ->join('products as p', 'p.id', '=', 'i.product_id')
+            ->join('warehouses as w', 'w.id', '=', 'a.warehouse_id')
+            ->join('users as u', 'u.id', '=', 'a.created_by')
+            ->where('a.status', 'confirmed')
+            ->whereDate('a.adjustment_date', '>=', $filters['from'])
+            ->whereDate('a.adjustment_date', '<=', $filters['to'])
+            ->whereNotNull('i.counted_qty')
+            ->when($filters['warehouse_id'] !== null, fn ($q) => $q->where('a.warehouse_id', $filters['warehouse_id']))
+            ->orderBy('a.adjustment_date')->orderBy('a.code')->orderBy('p.sku')
+            ->get([
+                'a.id as adjustment_id', 'a.code', 'a.adjustment_date', 'w.name as warehouse',
+                'p.id as product_id', 'p.sku', 'p.name as product_name',
+                'i.system_qty', 'i.counted_qty', 'i.diff_qty', 'i.reason', 'i.unit_cost', 'i.diff_value', 'u.name as creator',
+            ]);
+
+        $summary = [
+            'adjustments' => $items->pluck('adjustment_id')->unique()->count(),
+            'lines_total' => $items->count(),
+            'lines_diff' => 0,
+            'shortage_qty' => 0, 'shortage_value' => 0.0,
+            'surplus_qty' => 0, 'surplus_value' => 0.0,
+            'net_value' => 0.0,
+            'error_rate' => 0.0,
+        ];
+        $rows = [];
+
+        foreach ($items as $r) {
+            $diff = $r->diff_qty !== null ? (int) $r->diff_qty : (int) $r->counted_qty - (int) $r->system_qty;
+            $value = $r->diff_value !== null ? (float) $r->diff_value : round($diff * (float) $r->unit_cost, 2);
+
+            // Lọc theo lý do chỉ giữ các dòng CÓ chênh lệch và đúng lý do đó
+            if ($filters['reason'] !== null && ($diff === 0 || $r->reason !== $filters['reason'])) {
+                continue;
+            }
+
+            if ($diff !== 0) {
+                $summary['lines_diff']++;
+                if ($diff < 0) {
+                    $summary['shortage_qty'] += -$diff;
+                    $summary['shortage_value'] += -$value;
+                } else {
+                    $summary['surplus_qty'] += $diff;
+                    $summary['surplus_value'] += $value;
+                }
+                $summary['net_value'] += $value;
+            }
+
+            if ($filters['only_diff'] && $diff === 0) {
+                continue;
+            }
+
+            $rows[] = [
+                'adjustment_id' => (int) $r->adjustment_id,
+                'code' => (string) $r->code,
+                'date' => Carbon::parse($r->adjustment_date)->toDateString(),
+                'warehouse' => (string) $r->warehouse,
+                'product_id' => (int) $r->product_id,
+                'sku' => (string) $r->sku,
+                'product_name' => (string) $r->product_name,
+                'system_qty' => (int) $r->system_qty,
+                'counted_qty' => (int) $r->counted_qty,
+                'diff_qty' => $diff,
+                'diff_value' => round($value, 2),
+                'reason' => $r->reason,
+                'reason_label' => $r->reason !== null ? AdjustmentReason::tryFrom((string) $r->reason)?->label() : null,
+                'creator' => (string) $r->creator,
+            ];
+        }
+
+        foreach (['shortage_value', 'surplus_value', 'net_value'] as $key) {
+            $summary[$key] = round($summary[$key], 2);
+        }
+        $summary['error_rate'] = $summary['lines_total'] > 0 ? round($summary['lines_diff'] / $summary['lines_total'] * 100, 2) : 0.0;
+
+        return ['filters' => $filters, 'rows' => $rows, 'summary' => $summary];
     }
 
     /**
-     * UC05.04 — xuất báo cáo ra tệp .xlsx (bảng API #53, #55). Đã cài cho $type = 'stock-summary'; 'adjustments' còn là khung.
+     * UC05.04 — xuất báo cáo ra tệp .xlsx (bảng API #53, #55). $type = 'stock-summary' | 'adjustments'.
      *
      * Dữ liệu tạo bằng đúng bộ lọc hiện tại (BR05.04-4); báo cáo rỗng thì KHÔNG tạo tệp mà trả 404 "Không có dữ liệu" (BR05.04-3, BR05.04-6);
      * sau khi tạo tệp thành công ghi Activity Log `report_exported` (BR05.04-7). Tệp dựng bằng App\Support\SimpleXlsx (không cần thư viện ngoài).
@@ -146,21 +233,39 @@ class ReportService
      */
     public function buildExport(string $type, array $params, User $actor): Response
     {
-        if ($type !== 'stock-summary') {
-            throw new NotImplementedException('UC05.04 — ReportService::buildExport() cho báo cáo kiểm kê');
-        }
+        [$sheet, $header, $rows, $footer, $widths, $filters, $description, $filename] = match ($type) {
+            'stock-summary' => $this->stockSummaryExport($params),
+            'adjustments' => $this->adjustmentExport($params),
+            default => throw new NotFoundHttpException('Loại báo cáo không được hỗ trợ'),
+        };
 
-        $report = $this->stockSummary($params);
-
-        if ($report['rows'] === []) {
+        if ($rows === []) {
             throw new NotFoundHttpException('Không có dữ liệu để xuất');
         }
 
-        $f = $report['filters'];
-        $warehouse = $f['warehouse_id'] !== null ? Warehouse::query()->find($f['warehouse_id']) : null;
-        $t = $report['totals'];
+        $binary = SimpleXlsx::build($sheet, $header, $rows, $footer, $widths);
 
-        $binary = SimpleXlsx::build(
+        $this->logs->record(ActivityAction::ReportExported, 'reports', $description, ['new' => $filters], $actor);
+
+        return response($binary, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Content-Length' => (string) strlen($binary),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{0: string, 1: list<string>, 2: list<list<mixed>>, 3: list<mixed>, 4: list<float|int>, 5: array<string, mixed>, 6: string, 7: string}
+     */
+    private function stockSummaryExport(array $params): array
+    {
+        $report = $this->stockSummary($params);
+        $f = $report['filters'];
+        $t = $report['totals'];
+        $warehouse = $f['warehouse_id'] !== null ? Warehouse::query()->find($f['warehouse_id']) : null;
+
+        return [
             'Nhập - Xuất - Tồn',
             ['SKU', 'Sản phẩm', 'Đơn vị', 'Tồn đầu', 'Nhập', 'Xuất', 'Điều chỉnh', 'Tồn cuối', 'Giá vốn BQ cuối kỳ (đ)', 'Giá trị tồn cuối (đ)'],
             array_map(fn (array $r): array => [
@@ -169,23 +274,67 @@ class ReportService
             ], $report['rows']),
             ['Tổng cộng ('.count($report['rows']).' sản phẩm)', null, null, $t['opening'], $t['imports'], $t['exports'], $t['adjustment'], $t['closing'], null, $t['closing_value']],
             [14, 38, 10, 11, 11, 11, 12, 11, 22, 22],
-        );
-
-        $this->logs->record(
-            ActivityAction::ReportExported,
-            'reports',
+            $f,
             'Xuất Excel báo cáo Nhập – Xuất – Tồn '.$f['from'].' → '.$f['to'].' ('.($warehouse?->name ?? 'tất cả kho').')',
-            ['new' => $f],
-            $actor,
-        );
+            'nhap-xuat-ton_'.$f['from'].'_'.$f['to'].'.xlsx',
+        ];
+    }
 
-        $filename = 'nhap-xuat-ton_'.$f['from'].'_'.$f['to'].'.xlsx';
+    /**
+     * @param  array<string, mixed>  $params
+     * @return array{0: string, 1: list<string>, 2: list<list<mixed>>, 3: list<mixed>, 4: list<float|int>, 5: array<string, mixed>, 6: string, 7: string}
+     */
+    private function adjustmentExport(array $params): array
+    {
+        $report = $this->adjustmentReport($params);
+        $f = $report['filters'];
+        $s = $report['summary'];
+        $warehouse = $f['warehouse_id'] !== null ? Warehouse::query()->find($f['warehouse_id']) : null;
 
-        return response($binary, 200, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-            'Content-Length' => (string) strlen($binary),
-        ]);
+        return [
+            'Kiểm kê',
+            ['Ngày kiểm kê', 'Số phiếu', 'Kho', 'SKU', 'Sản phẩm', 'SL hệ thống', 'SL thực đếm', 'Chênh lệch', 'Giá trị chênh lệch (đ)', 'Lý do', 'Người lập'],
+            array_map(fn (array $r): array => [
+                Carbon::parse($r['date'])->format('d/m/Y'), $r['code'], $r['warehouse'], $r['sku'], $r['product_name'],
+                $r['system_qty'], $r['counted_qty'], $r['diff_qty'], $r['diff_value'], $r['reason_label'], $r['creator'],
+            ], $report['rows']),
+            ['Tổng chênh lệch ròng', null, null, null, null, null, null, $s['surplus_qty'] - $s['shortage_qty'], $s['net_value'], null, null],
+            [14, 18, 20, 14, 36, 13, 13, 12, 22, 14, 22],
+            $f,
+            'Xuất Excel báo cáo kiểm kê '.$f['from'].' → '.$f['to'].' ('.($warehouse?->name ?? 'tất cả kho').')',
+            'kiem-ke_'.$f['from'].'_'.$f['to'].'.xlsx',
+        ];
+    }
+
+    /**
+     * Bộ lọc báo cáo kiểm kê: giá trị sai bị bỏ, phần thiếu lấy mặc định (như summaryFilters).
+     *
+     * @param  array<string, mixed>  $params
+     * @return array{from: string, to: string, warehouse_id: int|null, reason: string|null, only_diff: bool}
+     */
+    private function adjustmentFilters(array $params): array
+    {
+        $valid = Validator::make($params, [
+            'from' => 'nullable|date_format:Y-m-d',
+            'to' => 'nullable|date_format:Y-m-d|after_or_equal:from',
+            'warehouse_id' => 'nullable|integer|min:1',
+            'reason' => ['nullable', 'string', 'in:'.implode(',', array_column(AdjustmentReason::cases(), 'value'))],
+        ])->valid();
+
+        $from = $valid['from'] ?? Carbon::now()->startOfMonth()->toDateString();
+        $to = $valid['to'] ?? Carbon::now()->toDateString();
+
+        // only_diff mặc định true; chỉ khi truyền giá trị "sai" rõ ràng (false, 0, off, no) mới liệt kê cả dòng khớp
+        $onlyDiff = ! array_key_exists('only_diff', $params)
+            || filter_var($params['only_diff'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) !== false;
+
+        return [
+            'from' => $from,
+            'to' => $to < $from ? $from : $to,
+            'warehouse_id' => isset($valid['warehouse_id']) ? (int) $valid['warehouse_id'] : null,
+            'reason' => isset($valid['reason']) && $valid['reason'] !== '' ? $valid['reason'] : null,
+            'only_diff' => $onlyDiff,
+        ];
     }
 
     /**
