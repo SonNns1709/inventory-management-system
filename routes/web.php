@@ -72,8 +72,8 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     // ---------------------------------------------------------------- Báo cáo và Quản trị (chỉ Admin)
     Route::middleware('role:admin')->group(function () {
         Route::get('/reports/stock-summary', [ReportController::class, 'stockSummary'])->name('reports.stock-summary'); // UC05.02
-    Route::get('/reports/stock-summary/export', [ReportController::class, 'exportStockSummary'])->name('reports.stock-summary.export'); // UC05.04
-    Route::get('/reports/adjustments', PlaceholderController::class)->name('reports.adjustments');     // UC05.03, UC05.04
+        Route::get('/reports/stock-summary/export', [ReportController::class, 'exportStockSummary'])->name('reports.stock-summary.export'); // UC05.04
+        Route::get('/reports/adjustments', PlaceholderController::class)->name('reports.adjustments');     // UC05.03, UC05.04
         Route::get('/users', [UserController::class, 'index'])->name('users.index'); // UC06.01
         Route::get('/activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index'); // UC06.02
     });
