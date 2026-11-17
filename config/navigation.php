@@ -159,7 +159,7 @@ return [
                     'roles' => ['admin'],
                     'uc' => ['UC05.03', 'UC05.04'],
                     'sprint' => 4,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET /api/reports/adjustments', 'GET /api/reports/adjustments/export'],
                     'service' => 'ReportService',
                 ],
