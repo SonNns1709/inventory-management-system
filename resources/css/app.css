@@ -1,11 +1,13 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
 @theme {
-    --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif,
-        'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans:
+        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji",
+        "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 
     /* Bảng màu thương hiệu. Mỗi vai trò một bộ màu (cách làm của demo1): đổi bằng thuộc tính data-role trên <body>. */
     --color-brand: #1e3a5f;
@@ -15,7 +17,7 @@
 }
 
 /* Nhân viên kho dùng bảng màu xanh lá — layouts/app.blade.php đặt <body data-role="{{ vai trò }}"> */
-body[data-role='staff'] {
+body[data-role="staff"] {
     --color-brand: #14532d;
     --color-brand-light: #1f6f50;
     --color-accent: #facc15;
@@ -69,6 +71,25 @@ body[data-role='staff'] {
 
     .btn-danger-outline {
         @apply border-red-300 bg-white text-red-700 hover:bg-red-50;
+    }
+
+    .badge {
+        @apply inline-block rounded-full px-2 py-0.5 text-xs font-semibold;
+    }
+    .badge-success {
+        @apply bg-green-100 text-green-800;
+    }
+    .badge-warning {
+        @apply bg-amber-100 text-amber-800;
+    }
+    .badge-danger {
+        @apply bg-red-100 text-red-700;
+    }
+    .badge-info {
+        @apply bg-sky-100 text-sky-800;
+    }
+    .badge-neutral {
+        @apply bg-slate-100 text-slate-600;
     }
 
     .data-table {

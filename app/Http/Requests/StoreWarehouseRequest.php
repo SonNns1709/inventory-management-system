@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Http\Requests\Concerns\VietnameseMessages;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * UC02.03 — thêm kho (POST /api/warehouses #17). BR02.03-1: mã kho hợp lệ và duy nhất (luôn viết hoa);
@@ -32,8 +33,18 @@ class StoreWarehouseRequest extends FormRequest
 
     public function rules(): array
     {
+        return static::rulesFor();
+    }
+
+    /**
+     * Luật dùng chung cho Form Request (API) và Livewire; mã hiện tại được giữ nguyên khi sửa.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    public static function rulesFor(?Warehouse $warehouse = null): array
+    {
         return [
-            'code' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9_\-]+$/', 'unique:warehouses,code'],
+            'code' => ['required', 'string', 'max:20', 'regex:/^[A-Z0-9_\-]+$/', Rule::unique('warehouses', 'code')->ignore($warehouse)],
             'name' => ['required', 'string', 'max:100'],
             'address' => ['nullable', 'string', 'max:255'],
         ];
