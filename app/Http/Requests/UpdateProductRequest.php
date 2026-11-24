@@ -6,7 +6,8 @@ use App\Models\Product;
 
 /**
  * UC02.06 — sửa sản phẩm (PUT /api/products/{product} #25).
- * SKU là tùy chọn; StoreProductRequest kiểm tra unique và cấm đổi SKU khi đã có thẻ kho (422).
+ * SKU là tùy chọn; StoreProductRequest kiểm tra unique; đổi SKU khi đã phát sinh giao dịch
+ * được chuyển cho ProductService xử lý và trả HTTP 409.
  */
 class UpdateProductRequest extends StoreProductRequest
 {

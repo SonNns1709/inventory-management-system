@@ -54,15 +54,10 @@ class StoreProductRequest extends FormRequest
             'string',
             'max:30',
             'regex:/^[A-Z0-9._\-]+$/',
-            Rule::unique('products', 'sku')->ignore($product),
         ];
 
-        if ($product !== null) {
-            $skuRules[] = function (string $attribute, mixed $value, \Closure $fail) use ($product): void {
-                if ($value !== $product->sku && $product->stockMovements()->exists()) {
-                    $fail('Sản phẩm đã phát sinh giao dịch, không được đổi SKU vì cần giữ nguyên thẻ kho.');
-                }
-            };
+        if ($product === null || ! static::hasTransactions($product)) {
+            $skuRules[] = Rule::unique('products', 'sku')->ignore($product);
         }
 
         return [
@@ -70,7 +65,7 @@ class StoreProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:200'],
             'category_id' => ['required', 'integer', 'exists:categories,id'],
             'unit' => ['required', 'string', 'max:20'],
-            'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999999.99'],
+            'price' => ['required', 'numeric', 'min:0', 'max:9999999999999.99'],
             'min_stock_level' => ['required', 'integer', 'min:0'],
             'description' => ['nullable', 'string', 'max:5000'],
         ];
@@ -94,5 +89,13 @@ class StoreProductRequest extends FormRequest
         return $this->commonMessages() + [
             'sku.regex' => 'SKU chỉ gồm chữ cái không dấu, chữ số và các ký tự . _ -',
         ];
+    }
+
+    private static function hasTransactions(Product $product): bool
+    {
+        return $product->importItems()->exists()
+            || $product->exportItems()->exists()
+            || $product->adjustmentItems()->exists()
+            || $product->stockMovements()->exists();
     }
 }

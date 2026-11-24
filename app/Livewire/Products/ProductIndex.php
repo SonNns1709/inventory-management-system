@@ -171,11 +171,17 @@ class ProductIndex extends Component
             return $this->redirectRoute('products.show', ['product' => $product->id]);
         }
 
-        $product = $service->update($product, $data);
-        $this->flash('Đã cập nhật sản phẩm.');
-        $this->closeForm();
+        try {
+            $product = $service->update($product, $data);
+            $this->flash('Đã cập nhật sản phẩm.');
+            $this->closeForm();
 
-        return $this->redirectRoute('products.show', ['product' => $product->id]);
+            return $this->redirectRoute('products.show', ['product' => $product->id]);
+        } catch (BusinessConflictException $e) {
+            $this->flash($e->getMessage(), 'error');
+
+            return null;
+        }
     }
 
     public function closeForm(): void
