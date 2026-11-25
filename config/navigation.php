@@ -106,7 +106,7 @@ return [
                     'roles' => ['admin', 'staff'],
                     'uc' => ['UC04.03'],
                     'sprint' => 3,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/adjustments', 'PUT /api/adjustments/{id}', 'POST /api/adjustments/{id}/refresh|confirm'],
                     'service' => 'StockAdjustmentService',
                 ],

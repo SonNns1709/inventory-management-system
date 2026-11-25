@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Web\ActivityLogController;
+use App\Http\Controllers\Web\StockAdjustmentController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
@@ -64,7 +65,9 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     Route::get('/products', PlaceholderController::class)->name('products.index');              // UC02.04 – UC02.07 (Admin: thêm/sửa/xóa)
     Route::get('/imports', PlaceholderController::class)->name('imports.index');                // UC03.01, UC03.03, UC03.04
     Route::get('/exports', PlaceholderController::class)->name('exports.index');                // UC03.02, UC03.03, UC03.04
-    Route::get('/adjustments', PlaceholderController::class)->name('adjustments.index');        // UC04.03
+    Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index'); // UC04.03
+    Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
+    Route::get('/adjustments/{adjustment}/edit', [StockAdjustmentController::class, 'edit'])->name('adjustments.edit');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');          // UC04.01, UC04.02
     Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock'])->name('inventory.low-stock'); // UC04.04
     Route::get('/inventory/{product}/stock-card', [InventoryController::class, 'stockCard'])->name('inventory.stock-card');
