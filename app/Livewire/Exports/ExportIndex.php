@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Exports;
 
+use App\Http\Filters\ExportFilter;
 use App\Models\Export;
 use App\Models\Warehouse;
 use App\Services\ExportService;
@@ -56,7 +57,7 @@ class ExportIndex extends Component
 
     public function sortBy(string $column): void
     {
-        if (! in_array($column, \App\Http\Filters\ExportFilter::SORTABLE, true)) {
+        if (! in_array($column, ExportFilter::SORTABLE, true)) {
             return;
         }
 

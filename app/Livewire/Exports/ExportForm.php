@@ -10,6 +10,7 @@ use App\Models\Warehouse;
 use App\Services\ExportService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Carbon;
 use Livewire\Component;
 
 /**
@@ -77,7 +78,7 @@ class ExportForm extends Component
         $this->warehouse_id = (string) $export->warehouse_id;
         $this->reason = $this->scalar($export->reason) ?: 'sale';
         $this->dest_warehouse_id = (string) ($export->dest_warehouse_id ?? '');
-        $this->export_date = \Illuminate\Support\Carbon::parse($export->export_date)->format('Y-m-d');
+        $this->export_date = Carbon::parse($export->export_date)->format('Y-m-d');
         $this->note = (string) $export->note;
         $this->items = $export->items
             ->map(fn ($item) => ['product_id' => (string) $item->product_id, 'quantity' => (int) $item->quantity])
