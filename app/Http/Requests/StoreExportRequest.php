@@ -26,6 +26,12 @@ class StoreExportRequest extends FormRequest
 
     public function rules(): array
     {
+        return static::rulesFor();
+    }
+
+    /** @return array<string, mixed> */
+    public static function rulesFor(): array
+    {
         return [
             'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('is_active', true)],
             'reason' => ['required', Rule::in(ExportReason::values())],

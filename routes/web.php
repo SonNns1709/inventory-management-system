@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\InventoryController;
+use App\Http\Controllers\Web\ExportController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ReportController;
@@ -63,7 +64,10 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     // ---------------------------------------------------------------- Dùng chung Admin + Nhân viên kho
     Route::get('/products', PlaceholderController::class)->name('products.index');              // UC02.04 – UC02.07 (Admin: thêm/sửa/xóa)
     Route::get('/imports', PlaceholderController::class)->name('imports.index');                // UC03.01, UC03.03, UC03.04
-    Route::get('/exports', PlaceholderController::class)->name('exports.index');                // UC03.02, UC03.03, UC03.04
+    Route::get('/exports', [ExportController::class, 'index'])->name('exports.index');          // UC03.02, UC03.03, UC03.04
+    Route::get('/exports/create', [ExportController::class, 'create'])->name('exports.create');
+    Route::get('/exports/{export}', [ExportController::class, 'show'])->name('exports.show');
+    Route::get('/exports/{export}/edit', [ExportController::class, 'edit'])->name('exports.edit');
     Route::get('/adjustments', PlaceholderController::class)->name('adjustments.index');        // UC04.03
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');          // UC04.01, UC04.02
     Route::get('/inventory/low-stock', [InventoryController::class, 'lowStock'])->name('inventory.low-stock'); // UC04.04
