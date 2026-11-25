@@ -12,6 +12,9 @@
             <li>Phiếu nhập, xuất, kiểm kê có nhật ký truy vết</li>
             <li>Giá trị tồn kho theo bình quân gia quyền</li>
         </ul>
+        <p class="mt-6 text-xs text-slate-300">
+            Đăng nhập sai {{ config('inventory.auth.login_max_attempts') }} lần sẽ bị tạm khóa {{ config('inventory.auth.login_decay_minutes') }} phút.
+        </p>
     @endsection
 
 @section('content')
