@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Enums\ActivityAction;
-use App\Enums\AdjustmentReason;
 use App\Enums\DocumentStatus;
 use App\Enums\MovementType;
 use App\Exceptions\BusinessConflictException;
@@ -164,6 +163,7 @@ class StockAdjustmentService
 
                 if (! $item) {
                     $errors["items.$index.product_id"] = 'Sản phẩm không thuộc phiếu kiểm kê này.';
+
                     continue;
                 }
 
@@ -171,6 +171,7 @@ class StockAdjustmentService
                 $diff = $counted - (int) $item->system_qty;
                 if ($diff !== 0 && empty($row['reason'])) {
                     $errors["items.$index.reason"] = 'Bắt buộc chọn lý do khi số đếm khác số hệ thống.';
+
                     continue;
                 }
 

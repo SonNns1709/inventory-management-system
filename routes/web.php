@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Web\ActivityLogController;
-use App\Http\Controllers\Web\StockAdjustmentController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
@@ -9,6 +8,7 @@ use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ReportController;
+use App\Http\Controllers\Web\StockAdjustmentController;
 use App\Http\Controllers\Web\SupplierController;
 use App\Http\Controllers\Web\UserController;
 use App\Http\Controllers\Web\WarehouseController;
