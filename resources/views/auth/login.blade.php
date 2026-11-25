@@ -1,6 +1,18 @@
-@extends('layouts.guest')
+    @extends('layouts.auth')
 
-@section('title', 'Đăng nhập')
+    @section('title', 'Đăng nhập')
+
+    {{-- Cột trái (chỉ hiện từ màn hình lớn): giới thiệu hệ thống. Nội dung nói đúng những gì hệ thống làm, không hứa "thời gian thực". --}}
+    @section('aside')
+        <p class="text-3xl font-bold tracking-wide">IMS<span class="text-accent">.Kho</span></p>
+        <p class="mb-7 mt-3 text-lg">Hệ thống Quản lý hàng tồn kho</p>
+        <ul class="space-y-2 text-sm leading-relaxed text-slate-200">
+            <li>Theo dõi tồn kho theo từng kho và từng sản phẩm</li>
+            <li>Cảnh báo tồn thấp theo ngưỡng của từng sản phẩm</li>
+            <li>Phiếu nhập, xuất, kiểm kê có nhật ký truy vết</li>
+            <li>Giá trị tồn kho theo bình quân gia quyền</li>
+        </ul>
+    @endsection
 
 @section('content')
     <div class="card">
