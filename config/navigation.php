@@ -70,7 +70,7 @@ return [
                     'roles' => ['admin', 'staff'],
                     'uc' => ['UC02.04', 'UC02.05', 'UC02.06', 'UC02.07'],
                     'sprint' => 1,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/products', 'GET /api/products/check-sku', 'GET|PUT|DELETE /api/products/{id}', 'PATCH /api/products/{id}/toggle'],
                     'service' => 'ProductService',
                 ],

@@ -7,6 +7,7 @@ use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\PlaceholderController;
+use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\ReportController;
 use App\Http\Controllers\Web\SupplierController;
@@ -62,10 +63,10 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     });
 
     // ---------------------------------------------------------------- Dùng chung Admin + Nhân viên kho
-    Route::get('/products', PlaceholderController::class)->name('products.index');              // UC02.04 – UC02.07 (Admin: thêm/sửa/xóa)
-    Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');          // UC03.01, UC03.03, UC03.04
-    Route::get('/imports/create', [ImportController::class, 'create'])->name('imports.create');
-    Route::get('/imports/{import}/edit', [ImportController::class, 'edit'])->name('imports.edit');
+    Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+    Route::get('/products/{product}/stock-card', [ProductController::class, 'stockCard'])->name('products.stock-card'); // UC04.02 (Sprint 3)
+    Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+    Route::get('/imports', PlaceholderController::class)->name('imports.index');                // UC03.01, UC03.03, UC03.04
     Route::get('/exports', PlaceholderController::class)->name('exports.index');                // UC03.02, UC03.03, UC03.04
     Route::get('/adjustments', PlaceholderController::class)->name('adjustments.index');        // UC04.03
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');          // UC04.01, UC04.02
