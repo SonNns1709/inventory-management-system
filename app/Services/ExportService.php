@@ -2,13 +2,20 @@
 
 namespace App\Services;
 
-use App\Exceptions\NotImplementedException;
+use App\Enums\ActivityAction;
+use App\Enums\DocumentStatus;
+use App\Enums\ExportReason;
+use App\Enums\MovementType;
+use App\Exceptions\BusinessConflictException;
 use App\Http\Filters\ExportFilter;
 use App\Models\Export;
+use App\Models\ExportItem;
 use App\Models\Inventory;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Phiếu xuất kho (bán hàng / chuyển kho) — UC03.02 (lập / xác nhận), UC03.03 (tra cứu), UC03.04 (hủy nháp).
@@ -91,7 +98,32 @@ class ExportService
      */
     public function createDraft(User $actor, array $data): Export
     {
-        throw new NotImplementedException('UC03.02 — ExportService::createDraft()');
+        return DB::transaction(function () use ($actor, $data): Export {
+            $export = Export::create([
+                'code' => $this->numbers->next('export', Carbon::parse($data['export_date'])),
+                'warehouse_id' => (int) $data['warehouse_id'],
+                'reason' => $data['reason'],
+                'dest_warehouse_id' => $data['reason'] === ExportReason::Transfer->value
+                    ? (int) $data['dest_warehouse_id']
+                    : null,
+                'export_date' => $data['export_date'],
+                'status' => DocumentStatus::Draft,
+                'total_cost' => 0,
+                'note' => $data['note'] ?? null,
+                'created_by' => $actor->getKey(),
+            ]);
+
+            $this->replaceItems($export, $data['items']);
+            $this->logs->record(
+                ActivityAction::ExportCreated,
+                $export,
+                "Lập phiếu xuất {$export->code}",
+                ['new' => $this->exportSnapshot($export)],
+                $actor,
+            );
+
+            return $this->getDetail($export->getKey());
+        });
     }
 
     /**
@@ -101,7 +133,33 @@ class ExportService
      */
     public function updateDraft(Export $export, array $data): Export
     {
-        throw new NotImplementedException('UC03.02 — ExportService::updateDraft()');
+        return DB::transaction(function () use ($export, $data): Export {
+            $export = Export::query()->whereKey($export->getKey())->lockForUpdate()->firstOrFail();
+            if (! $export->isDraft()) {
+                throw new BusinessConflictException('Chỉ phiếu nháp mới được sửa');
+            }
+
+            $old = $this->exportSnapshot($export);
+            $export->fill([
+                'warehouse_id' => (int) $data['warehouse_id'],
+                'reason' => $data['reason'],
+                'dest_warehouse_id' => $data['reason'] === ExportReason::Transfer->value
+                    ? (int) $data['dest_warehouse_id']
+                    : null,
+                'export_date' => $data['export_date'],
+                'note' => $data['note'] ?? null,
+            ])->save();
+
+            $this->replaceItems($export, $data['items']);
+            $this->logs->record(
+                ActivityAction::ExportUpdated,
+                $export,
+                "Cập nhật phiếu xuất {$export->code}",
+                ['old' => $old, 'new' => $this->exportSnapshot($export)],
+            );
+
+            return $this->getDetail($export->getKey());
+        });
     }
 
     /**
@@ -121,12 +179,163 @@ class ExportService
      */
     public function confirm(Export $export, User $actor): Export
     {
-        throw new NotImplementedException('UC03.02 — ExportService::confirm()');
+        return DB::transaction(function () use ($export, $actor): Export {
+            $export = Export::query()->whereKey($export->getKey())->lockForUpdate()->firstOrFail();
+            if (! $export->isDraft()) {
+                throw new BusinessConflictException('Chỉ phiếu nháp mới được xác nhận');
+            }
+
+            $items = $export->items()->orderBy('product_id')->lockForUpdate()->get();
+            if ($items->isEmpty()) {
+                throw new BusinessConflictException('Phiếu xuất phải có ít nhất một dòng hàng');
+            }
+
+            $shortages = [];
+            foreach ($items as $item) {
+                $inventory = Inventory::query()
+                    ->where('warehouse_id', $export->warehouse_id)
+                    ->where('product_id', $item->product_id)
+                    ->lockForUpdate()
+                    ->first();
+                $available = (int) ($inventory?->quantity ?? 0);
+                if ($available < (int) $item->quantity) {
+                    $product = Product::query()->find($item->product_id);
+                    $shortages[] = ($product?->sku ?? ('#'.$item->product_id))
+                        .' cần '.(int) $item->quantity
+                        .', tồn khả dụng còn '.$available;
+                }
+            }
+
+            if ($shortages !== []) {
+                throw new BusinessConflictException('Không đủ tồn để xác nhận: '.implode('; ', $shortages));
+            }
+
+            $totalCost = 0.0;
+            foreach ($items as $item) {
+                $product = Product::query()->whereKey($item->product_id)->lockForUpdate()->firstOrFail();
+                $cost = (string) $product->avg_cost;
+                $lineTotal = round((int) $item->quantity * (float) $cost, 2);
+
+                $item->forceFill([
+                    'unit_cost' => $cost,
+                    'line_total' => number_format($lineTotal, 2, '.', ''),
+                ])->save();
+                $totalCost += $lineTotal;
+
+                if ($export->reason === ExportReason::Sale) {
+                    $this->inventory->applyMovement(
+                        $product,
+                        $export->warehouse_id,
+                        MovementType::Export,
+                        -(int) $item->quantity,
+                        'exports',
+                        (int) $export->getKey(),
+                        $cost,
+                        $cost,
+                        $actor,
+                    );
+                } else {
+                    $this->inventory->applyMovement(
+                        $product,
+                        $export->warehouse_id,
+                        MovementType::TransferOut,
+                        -(int) $item->quantity,
+                        'exports',
+                        (int) $export->getKey(),
+                        $cost,
+                        $cost,
+                        $actor,
+                    );
+                    $this->inventory->applyMovement(
+                        $product,
+                        (int) $export->dest_warehouse_id,
+                        MovementType::TransferIn,
+                        (int) $item->quantity,
+                        'exports',
+                        (int) $export->getKey(),
+                        $cost,
+                        $cost,
+                        $actor,
+                    );
+                }
+            }
+
+            $export->forceFill([
+                'status' => DocumentStatus::Confirmed,
+                'total_cost' => number_format($totalCost, 2, '.', ''),
+                'confirmed_by' => $actor->getKey(),
+                'confirmed_at' => now(),
+            ])->save();
+
+            $this->logs->record(
+                ActivityAction::ExportConfirmed,
+                $export,
+                "Xác nhận phiếu xuất {$export->code}",
+                ['new' => $this->exportSnapshot($export)],
+                $actor,
+            );
+
+            return $this->getDetail($export->getKey());
+        });
     }
 
     /** UC03.04 — hủy phiếu xuất nháp. TODO (Sprint 3): như ImportService::cancel(); ghi Activity Log ExportCancelled. */
     public function cancel(Export $export, User $actor): Export
     {
-        throw new NotImplementedException('UC03.04 — ExportService::cancel()');
+        return DB::transaction(function () use ($export, $actor): Export {
+            $export = Export::query()->whereKey($export->getKey())->lockForUpdate()->firstOrFail();
+            if (! $export->isDraft()) {
+                throw new BusinessConflictException('Chỉ phiếu nháp mới được hủy');
+            }
+
+            $export->forceFill(['status' => DocumentStatus::Cancelled])->save();
+            $this->logs->record(
+                ActivityAction::ExportCancelled,
+                $export,
+                "Hủy phiếu xuất {$export->code}",
+                ['new' => $this->exportSnapshot($export)],
+                $actor,
+            );
+
+            return $this->getDetail($export->getKey());
+        });
+    }
+
+    /** @param array<int, array{product_id: int, quantity: int}> $items */
+    private function replaceItems(Export $export, array $items): void
+    {
+        $export->items()->delete();
+        foreach ($items as $item) {
+            ExportItem::create([
+                'export_id' => $export->getKey(),
+                'product_id' => (int) $item['product_id'],
+                'quantity' => (int) $item['quantity'],
+                'unit_cost' => null,
+                'line_total' => null,
+            ]);
+        }
+    }
+
+    /** @return array<string, mixed> */
+    private function exportSnapshot(Export $export): array
+    {
+        $export->loadMissing('items');
+
+        return [
+            'id' => $export->getKey(),
+            'code' => $export->code,
+            'warehouse_id' => $export->warehouse_id,
+            'reason' => $export->reason instanceof \BackedEnum ? $export->reason->value : (string) $export->reason,
+            'dest_warehouse_id' => $export->dest_warehouse_id,
+            'export_date' => $export->export_date->toDateString(),
+            'status' => $export->status instanceof \BackedEnum ? $export->status->value : (string) $export->status,
+            'total_cost' => (string) $export->total_cost,
+            'items' => $export->items->map(fn (ExportItem $item) => [
+                'product_id' => $item->product_id,
+                'quantity' => $item->quantity,
+                'unit_cost' => $item->unit_cost,
+                'line_total' => $item->line_total,
+            ])->all(),
+        ];
     }
 }
