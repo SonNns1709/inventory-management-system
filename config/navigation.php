@@ -86,7 +86,7 @@ return [
                     'roles' => ['admin', 'staff'],
                     'uc' => ['UC03.01', 'UC03.03', 'UC03.04'],
                     'sprint' => 3,
-                    'ready' => false,
+                    'ready' => true,
                     'api' => ['GET|POST /api/imports', 'POST /api/imports/preview-cost', 'GET|PUT /api/imports/{id}', 'POST /api/imports/{id}/confirm|cancel'],
                     'service' => 'ImportService',
                 ],
