@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ExportController;
 use App\Http\Controllers\Web\InventoryController;
+use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\PlaceholderController;
 use App\Http\Controllers\Web\ProductController;
 use App\Http\Controllers\Web\ProfileController;
@@ -66,7 +67,9 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/{product}/stock-card', [ProductController::class, 'stockCard'])->name('products.stock-card'); // UC04.02 (Sprint 3)
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
-    Route::get('/imports', PlaceholderController::class)->name('imports.index');                // UC03.01, UC03.03, UC03.04
+    Route::get('/imports', [ImportController::class, 'index'])->name('imports.index');          // UC03.01, UC03.03, UC03.04
+    Route::get('/imports/create', [ImportController::class, 'create'])->name('imports.create');
+    Route::get('/imports/{import}/edit', [ImportController::class, 'edit'])->name('imports.edit');
     Route::get('/exports', [ExportController::class, 'index'])->name('exports.index');          // UC03.02, UC03.03, UC03.04
     Route::get('/exports/create', [ExportController::class, 'create'])->name('exports.create');
     Route::get('/exports/{export}', [ExportController::class, 'show'])->name('exports.show');
