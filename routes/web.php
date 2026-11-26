@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CategoryController;
 use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\ExportController;
+use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\InventoryController;
 use App\Http\Controllers\Web\ImportController;
 use App\Http\Controllers\Web\PlaceholderController;
@@ -75,7 +76,7 @@ Route::middleware(['auth', 'active', 'password.changed'])->group(function () {
     Route::get('/exports/create', [ExportController::class, 'create'])->name('exports.create');
     Route::get('/exports/{export}', [ExportController::class, 'show'])->name('exports.show');
     Route::get('/exports/{export}/edit', [ExportController::class, 'edit'])->name('exports.edit');
-    Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index'); // UC04.03
+    Route::get('/adjustments', [StockAdjustmentController::class, 'index'])->name('adjustments.index');        // UC04.03
     Route::get('/adjustments/create', [StockAdjustmentController::class, 'create'])->name('adjustments.create');
     Route::get('/adjustments/{adjustment}/edit', [StockAdjustmentController::class, 'edit'])->name('adjustments.edit');
     Route::get('/inventory', [InventoryController::class, 'index'])->name('inventory.index');          // UC04.01, UC04.02
